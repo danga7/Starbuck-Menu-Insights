@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="style_2.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cabin:wght@400;700&display=swap" rel="stylesheet">
+    <title>Scatterplot-Starbucks Menu</title>
+</head>
+<style>
+
+</style>
+<body>
+    
+    <script>
+        //get data and convert to numeric data
+        d3.csv("./starbucks_menu.csv").then(function (data) {
+            var getData = data.map(function (row) {
+                row.Calories = parseFloat(row.Calories)
+                row.Fat = parseFloat(row.Fat)
+                row.Carb = parseFloat(row.Carb)
+                row.Fiber = parseFloat(row.Fiber)
+                row.Protein = parseFloat(row.Protein)
+            return row;
+            })
+        
+        //set width,height,margin
+        var width = innerWidth/5 + margin
+        var height = innerHeight/4 * 3
+        var margin = 60;
+
+        //set canvas
+        var svg = d3.select(".chart-container")
+                    .append("svg")
+                    .attr("class","chart")
+                    // .attr("width",600)
+                    // .attr("height",500)
+
+        //get extent
+        var extentCalories = d3.extent(getData,function(d){return d.Calories});
+        var extentFat = d3.extent(getData,function(d){return d.Fat});
+        var extentProtein = d3.extent(getData,function(d){return d.Protein});
+        console.log(extentCalories,extentFat,extentProtein)
+
+        //set scale for each ingredient
+        var scaleCalories = d3.scaleLinear()
+                            .domain(extentCalories)
+                            .range([height,margin])
+        var scaleFat = d3.scaleLinear()
+                        .domain(extentFat)
+                        .range([0,innerWidth/2+margin])
+        
+        //set x asix
+        var x = d3.scaleLinear()
+                .domain([0,40])
+                .range([0,innerWidth/2+margin]);
+        svg.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x))
+                .attr("font-size","12px")
+                .attr("fill-opacity","0.5")
+        svg.append("text")
+            .attr("text-anchor","end")
+            .attr("x",innerWidth/2+margin+50)
+            .attr("y",height+10)
+            .attr("font-size","14px")
+            .text("Fat");
+        
+        //set y axis
+        var y = d3.scaleLinear()
+                .domain(extentCalories)
+                .range([height,margin])
+        svg.append("g")
+            .call(d3.axisLeft(y))
+            .attr("font-size","12px")
+            .attr("fill-opacity","0.5")
+
+        svg.append("text")
+            .attr("text-anchor","end")
+            .attr("x",width-15)
+            .attr("y",margin-30)
+            .attr("font-size","14px")
+            .text("Calories")
+        
+        //set tooltip
+        var tooltip_div = d3.select(".side-container")
+                            .append("div")
+                            .attr("id","tooltip")
+                            .style("opacity",0)
+                            
+        //1st base bubbles
+        svg.selectAll("circle")
+            .data(data)
+            .join("circle")
+            .attr("cx", function(d){return scaleFat(d.Fat)})
+            .attr("cy", function(d){return scaleCalories(d.Calories)})
+            .attr("r",10)
+            .attr("fill","#10491f")
+            .attr("fill-opacity",0.5)
+            
+            //tooltip on hover
+            .on("mouseover", function(event,d){
+                tooltip_div.transition()
+                    .duration("100")
+                    .style("opacity",0.8)
+                tooltip_div.html(d["Name"] + "<br/>" + "Calories: " + d.Calories + "<br/>" + "Fat: " + d.Fat)
+                d3.select(this).attr("r",15)
+                d3.select(this).attr("fill","#ffffff");
+            })
+            .on("mouseout", function(d){
+                tooltip_div.transition()
+                            .duration("100")
+                            .style("opacity",0)
+                d3.select(this).attr("r",10)
+                d3.select(this).attr("fill","#10491f");
+            })
+
+
+        function updateCircle(filteredData){
+            svg.selectAll("circle")
+                .data(filteredData, function(d,i){return d.Protein})
+                .join(
+                    function(enter){
+                    },
+                    function(update){
+                        var geometry = update.style("fill-opacity","0.2")
+                        return geometry;
+                    },
+                    function(exit){
+                        var geometry = exit.style("fill-opacity","1")
+                                        .append(function (d){
+                                            return d.Protein
+                                        })
+                    }
+                )
+        }
+
+        function updateCircle(filteredData){
+            svg.selectAll("circle")
+                .data(filteredData)
+                .join(
+                    function(enter){
+                    },
+                    function(update){
+                        var geometry = update.attr("fill-opacity","0.3")
+                    },
+                    function(exit){
+                        var geometry = exit.attr("fill-opacity","0.7")
+                                        // .append(function (d){
+                                        //     return d.Protein
+                                        // })
+                    },
+                )
+        }
+
+        //var rangeProtein = d3.extent(data, function(d){return d.Protein})
+
+        d3.select("#my-slider")
+            .append("input")
+            .attr("type","range")
+            .attr("min", extentProtein[0])
+            .attr("max",extentProtein[1])
+            .on("mouseup", function (e,d){
+                var maxProtein = parseFloat(this.value);
+                var filteredData = data.filter(function(element){
+                    if (element.Protein <= maxProtein){
+                        return element;
+                    }
+                })
+                updateCircle(filteredData)
+            })
+
+        })
+    </script>
+
+
+    <div class="container">
+        <div class="chart-container">
+            <h1>STARBUCKS MENU INSIGHTS</h1>
+            <!-- <div class="chart"></div> -->
+        </div>
+        <div class = "side-container">
+            <p>Starbucks Menu ingredients are divided based on their levels in Calories and Fat. Move the slider to filter out the level of their Protein as well. </p>
+            <div id="my-slider"></div>
+        </div>
+    </div>
+    
+</body>
+</html>
